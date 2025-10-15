@@ -2,8 +2,8 @@
   "source": "site_v4",
   "site_v4": { "url": "https://www.wanted.co.kr/api/v4/jobs" },
   "filters": {
-    "query": "데이터",          // 키워드만
-    "locations": ["101"],       // 모르면 [] 가능
+    "query": "데이터",
+    "locations": ["101"],
     "country": "kr",
     "job_sort": "job.latest_order"
   },
@@ -15,7 +15,7 @@
     "auth": {
       "user_name": "장동현",
       "user_email": "wkdehdgus0328@gmail.com",
-      "password": "fuyg isrc yzdi lufh",
+      "password": "",
       "use_tls": false
     },
     "send": {
