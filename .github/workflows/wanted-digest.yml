@@ -27,10 +27,10 @@ jobs:
           [ -f last_ids.txt ] || touch last_ids.txt
           ls -la
 
-      - name: Run mailer (force test)
+      - name: Run mailer
   env:
-    SMTP_PASS: ${{ secrets.SMTP_PASS }}
-    WM_CONFIG_PATH: config.json
-    WM_STATE_PATH: last_ids.txt
-    FORCE_TEST: "1"  # ✅ 강제 발송
-  run: python wanted_mailer.py
+          # 시크릿이 없더라도 코드가 config.password로 폴백하므로 에러 안 남
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          WM_CONFIG_PATH: config.json
+          WM_STATE_PATH: last_ids.txt
+        run: python wanted_mailer.py
