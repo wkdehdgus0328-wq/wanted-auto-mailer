@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Set
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime
+from urllib.parse import urlencode
 
 CONFIG_PATH = os.getenv("WM_CONFIG_PATH", "config.json")
 STATE_PATH  = os.getenv("WM_STATE_PATH",  "last_ids.txt")
@@ -25,62 +26,51 @@ def pick_source(cfg:Dict[str,Any]):
     headers = {"Accept":"application/json","User-Agent":"Mozilla/5.0"}
     return "site_v4", url, headers
 
-# ---------- 파라미터 안전 구성 ----------
+# v4에서 안전한 쿼리 파라미터만 사용
 def build_params(cfg: Dict[str, Any], page: int) -> List[tuple]:
-    """v4에서 안전하게 받는 키만, 단일 키로 보냄 (query/country/locations/limit/offset [+job_sort])"""
     fs = cfg.get("filters", {})
-    limit  = int(cfg.get("paging", {}).get("limit", 50))
+    limit  = int(cfg.get("paging", {}).get("limit", 30))
     offset = page * limit
-
     params: List[tuple] = []
 
-    # query 하나만
     q = (fs.get("query") or "").strip()
-    if q:
-        params.append(("query", q))
+    if q: params.append(("query", q))
 
-    # locations: 숫자만 허용
     locs = fs.get("locations", [])
     if isinstance(locs, str):
         locs = [v.strip() for v in locs.split(",") if v.strip()]
     for v in locs:
-        try:
-            params.append(("locations", str(int(v))))
-        except ValueError:
-            pass
+        try: params.append(("locations", str(int(v))))
+        except ValueError: pass
 
-    # country
     params.append(("country", (fs.get("country") or "kr").lower()))
 
-    # job_sort는 job.* 형식만 허용
     js = (fs.get("job_sort") or "").strip()
-    if js.startswith("job."):
-        params.append(("job_sort", js))
+    if js.startswith("job."): params.append(("job_sort", js))
 
     params += [("limit", str(limit)), ("offset", str(offset))]
     return params
 
 def fetch_jobs(cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
     _, url, headers = pick_source(cfg)
-    max_pages = int(cfg.get("paging", {}).get("max_pages", 2))
-    limit     = int(cfg.get("paging", {}).get("limit", 50))
-
+    max_pages = int(cfg.get("paging", {}).get("max_pages", 1))
+    limit     = int(cfg.get("paging", {}).get("limit", 30))
     results: List[Dict[str, Any]] = []
+
     for page in range(max_pages):
         params = build_params(cfg, page)
-        resp = requests.get(url, params=params, headers=headers, timeout=25)
+        print("GET URL:", url + "?" + urlencode(params, doseq=True))
 
-        # 422면 최소 파라미터로 재시도
+        resp = requests.get(url, params=params, headers=headers, timeout=25)
         if resp.status_code == 422:
             print("⚠️ 422 → retry with minimal params")
             minimal = [("country","kr"),("limit",str(limit)),("offset",str(page*limit))]
             q = next((v for (k,v) in params if k=="query"), "")
             if q: minimal.append(("query", q))
+            print("GET URL (minimal):", url + "?" + urlencode(minimal, doseq=True))
             resp = requests.get(url, params=minimal, headers=headers, timeout=25)
 
-        print("GET", resp.url)
         resp.raise_for_status()
-
         data = resp.json()
         items = (
             data.get("data") if isinstance(data, dict) and isinstance(data.get("data"), list) else
@@ -88,13 +78,10 @@ def fetch_jobs(cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
             data.get("jobs") if isinstance(data, dict) and isinstance(data.get("jobs"), list) else
             data if isinstance(data, list) else []
         )
-        if not items:
-            break
+        if not items: break
         results.extend(items)
-        if len(items) < limit:
-            break
+        if len(items) < limit: break
     return results
-# ---------- 끝 ----------
 
 def norm(raw:Dict[str,Any])->Dict[str,str]:
     jid=str(raw.get("id") or raw.get("position_id") or raw.get("job_id") or "")
@@ -135,6 +122,7 @@ def send_mail(html:str, cfg:Dict[str,Any], n:int):
     mail=cfg.get("email",{}); auth=mail.get("auth",{}); send=mail.get("send",{})
     host=mail.get("smtp_host"); port=int(mail.get("smtp_port",465)); use_tls=bool(auth.get("use_tls",False))
     user_email=auth.get("user_email","")
+    # 우선 시크릿, 없으면 config의 password 사용
     user_pass=os.getenv("SMTP_PASS", auth.get("password",""))
     from_name=send.get("from_name", auth.get("user_name","")); from_email=send.get("from_email", user_email)
     to_name=send.get("to_name",""); to_email=send.get("to_email")
