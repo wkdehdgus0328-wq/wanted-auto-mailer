@@ -1,39 +1,7 @@
-name: Wanted Digest
-
-on:
-  workflow_dispatch:      # 수동 실행 가능
-  schedule:
-    - cron: "0 21 * * *"  # 매일 06:00 KST (UTC 21:00)
-
-jobs:
-  run-mailer:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          else
-            pip install requests
-          fi
-
-      - name: Ensure state file
-        run: |
-          [ -f last_ids.txt ] || touch last_ids.txt
-          ls -la
-
-      - name: Run mailer
-        env:
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          WM_CONFIG_PATH: config.json
-          WM_STATE_PATH: last_ids.txt
-        run: python wanted_mailer.py
+- name: Run mailer (force test)
+  env:
+    SMTP_PASS: ${{ secrets.SMTP_PASS }}
+    WM_CONFIG_PATH: config.json
+    WM_STATE_PATH: last_ids.txt
+    FORCE_TEST: "1"
+  run: python wanted_mailer.py
