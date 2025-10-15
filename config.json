@@ -10,7 +10,7 @@
     "auth": {
       "user_name": "장동현",
       "user_email": "wkdehdgus0328@gmail.com",
-      "password": "fuyg isrc yzdi lufh",          // 깃허브에선 비워두고 Secrets 사용 권장
+      "password": "fuyg isrc yzdi lufh",          
       "use_tls": false
     },
     "send": {
@@ -22,3 +22,4 @@
     }
   }
 }
+
