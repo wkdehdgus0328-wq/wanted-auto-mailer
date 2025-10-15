@@ -27,11 +27,10 @@ jobs:
           [ -f last_ids.txt ] || touch last_ids.txt
           ls -la
 
-      # 🔽 여기 스텝이 강제 테스트 발송입니다. (신규 없어도 1통 보냄)
-      - name: Run mailer (force test)
+      - name: Run mailer
         env:
+          # 시크릿이 없더라도 코드가 config.password로 폴백하므로 에러 안 남
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           WM_CONFIG_PATH: config.json
           WM_STATE_PATH: last_ids.txt
-          FORCE_TEST: "1"
         run: python wanted_mailer.py
