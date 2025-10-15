@@ -1,57 +1,16 @@
-name: Wanted Digest (debug)
+name: Wanted Digest
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:      # 수동 실행 가능
   schedule:
-    - cron: "0 21 * * *"  # 06:00 KST
+    - cron: "0 21 * * *"  # 매일 06:00 KST (UTC 21:00)
 
 jobs:
   run-mailer:
     runs-on: ubuntu-latest
-    env:
-      PYTHONUNBUFFERED: "1"   # 로그 플러시
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Show repo tree
-        run: |
-          pwd
-          ls -la
-
-      - name: Check secrets
-        env:
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-        run: |
-          if [ -z "${SMTP_PASS}" ]; then
-            echo "❌ SMTP_PASS is NOT set in Repository secrets"; exit 1
-          else
-            echo "✅ SMTP_PASS is set (value masked by GitHub)"
-          fi
-
-      - name: Validate config.json
-        run: |
-          if [ ! -f config.json ]; then
-            echo "❌ config.json not found at repo root"; exit 1
-          fi
-          python - <<'PY'
-          import json, sys
-          try:
-              with open("config.json","r",encoding="utf-8") as f:
-                  j=json.load(f)
-          except Exception as e:
-              print("❌ config.json JSON parse error:", repr(e)); sys.exit(1)
-          try:
-              email=j["email"]; auth=email["auth"]
-              assert email.get("smtp_host"), "email.smtp_host missing"
-              assert email.get("smtp_port"), "email.smtp_port missing"
-              assert auth.get("user_email"), "email.auth.user_email missing"
-              send=email["send"]
-              assert send.get("to_email") and send.get("from_email"), "email.send.to_email/from_email missing"
-          except Exception as e:
-              print("❌ config.json field missing:", e); sys.exit(1)
-          print("✅ config.json looks OK")
-          PY
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -66,22 +25,15 @@ jobs:
           else
             pip install requests
           fi
-          python -V
-          python - <<'PY'
-          import importlib, sys
-          try:
-              importlib.import_module("requests")
-              print("✅ requests import OK")
-          except Exception as e:
-              print("❌ requests import failed:", repr(e)); sys.exit(1)
-          PY
 
-      - name: Run mailer (force TEST once)
+      - name: Ensure state file
+        run: |
+          [ -f last_ids.txt ] || touch last_ids.txt
+          ls -la
+
+      - name: Run mailer
         env:
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           WM_CONFIG_PATH: config.json
           WM_STATE_PATH: last_ids.txt
-          FORCE_TEST: "1"      # 신규 없어도 테스트 메일 발송
-        run: |
-          [ -f last_ids.txt ] || touch last_ids.txt
-          python wanted_mailer.py
+        run: python wanted_mailer.py
