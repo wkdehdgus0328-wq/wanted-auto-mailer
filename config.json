@@ -1,16 +1,24 @@
 {
   "source": "site_v4",
   "site_v4": { "url": "https://www.wanted.co.kr/api/v4/jobs" },
-  "filters": { "query": "데이터 엔지니어" },
-  "paging": { "limit": 50, "max_pages": 1 },
+
+  "filters": {
+    "query": "데이터",     // 키워드만 테스트 (한글 OK)
+    "locations": ["101"],  // 선택(서울). 모르면 빈 배열 [] 로
+    "country": "kr",
+    "job_sort": "job.latest_order"   // 선택. 모르면 지워도 OK
+  },
+
+  "paging": { "limit": 30, "max_pages": 1 },
   "only_new": true,
+
   "email": {
     "smtp_host": "smtp.gmail.com",
     "smtp_port": 465,
     "auth": {
       "user_name": "장동현",
       "user_email": "wkdehdgus0328@gmail.com",
-      "password": "fuyg isrc yzdi lufh",          
+      "password": "fuyg isrc yzdi lufh",
       "use_tls": false
     },
     "send": {
@@ -22,4 +30,3 @@
     }
   }
 }
-
