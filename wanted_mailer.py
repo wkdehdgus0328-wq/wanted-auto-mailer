@@ -25,9 +25,9 @@ def pick_source(cfg:Dict[str,Any]):
     headers = {"Accept":"application/json","User-Agent":"Mozilla/5.0"}
     return "site_v4", url, headers
 
-# ---------- 여기서부터 핵심 수정 ----------
+# ---------- 파라미터 안전 구성 ----------
 def build_params(cfg: Dict[str, Any], page: int) -> List[tuple]:
-    """v4에서 안전하게 받는 키만, 단일 키로 보냅니다."""
+    """v4에서 안전하게 받는 키만, 단일 키로 보냄 (query/country/locations/limit/offset [+job_sort])"""
     fs = cfg.get("filters", {})
     limit  = int(cfg.get("paging", {}).get("limit", 50))
     offset = page * limit
@@ -52,7 +52,7 @@ def build_params(cfg: Dict[str, Any], page: int) -> List[tuple]:
     # country
     params.append(("country", (fs.get("country") or "kr").lower()))
 
-    # job_sort는 job.* 형식일 때만
+    # job_sort는 job.* 형식만 허용
     js = (fs.get("job_sort") or "").strip()
     if js.startswith("job."):
         params.append(("job_sort", js))
@@ -69,15 +69,16 @@ def fetch_jobs(cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
     for page in range(max_pages):
         params = build_params(cfg, page)
         resp = requests.get(url, params=params, headers=headers, timeout=25)
+
+        # 422면 최소 파라미터로 재시도
         if resp.status_code == 422:
-            # 최소 파라미터로 재시도
             print("⚠️ 422 → retry with minimal params")
             minimal = [("country","kr"),("limit",str(limit)),("offset",str(page*limit))]
             q = next((v for (k,v) in params if k=="query"), "")
             if q: minimal.append(("query", q))
             resp = requests.get(url, params=minimal, headers=headers, timeout=25)
 
-        print("GET", resp.url)  # 최종 요청 URL 로깅
+        print("GET", resp.url)
         resp.raise_for_status()
 
         data = resp.json()
@@ -93,7 +94,7 @@ def fetch_jobs(cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
         if len(items) < limit:
             break
     return results
-# ---------- 핵심 수정 끝 ----------
+# ---------- 끝 ----------
 
 def norm(raw:Dict[str,Any])->Dict[str,str]:
     jid=str(raw.get("id") or raw.get("position_id") or raw.get("job_id") or "")
@@ -175,7 +176,6 @@ def main():
     only_new=bool(cfg.get("only_new",True))
     items=filter_new(items_raw,sent) if only_new else [norm(x) for x in items_raw]
 
-    # 강제 테스트 메일
     if force_test and not items:
         html = f"""
         <h2>✅ Wanted Mailer 테스트</h2>
