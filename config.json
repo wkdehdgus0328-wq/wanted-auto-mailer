@@ -1,17 +1,14 @@
 {
   "source": "site_v4",
   "site_v4": { "url": "https://www.wanted.co.kr/api/v4/jobs" },
-
   "filters": {
-    "query": "데이터",     // 키워드만 테스트 (한글 OK)
-    "locations": ["101"],  // 선택(서울). 모르면 빈 배열 [] 로
+    "query": "데이터",          // 키워드만
+    "locations": ["101"],       // 모르면 [] 가능
     "country": "kr",
-    "job_sort": "job.latest_order"   // 선택. 모르면 지워도 OK
+    "job_sort": "job.latest_order"
   },
-
   "paging": { "limit": 30, "max_pages": 1 },
   "only_new": true,
-
   "email": {
     "smtp_host": "smtp.gmail.com",
     "smtp_port": 465,
