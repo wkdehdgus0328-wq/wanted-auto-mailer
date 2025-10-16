@@ -1,36 +1,35 @@
-name: Wanted Digest
-
+name: Wanted Auto Mailer
 on:
-  workflow_dispatch:      # 수동 실행
   schedule:
-    - cron: "0 21 * * *"  # 매일 06:00 KST (UTC 21:00)
-
+    - cron: "0 23 * * *"  # 한국시간 오전 8시 (UTC 기준 23시)
+  workflow_dispatch:      # 수동 실행도 가능
 jobs:
-  run-mailer:
+  send:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: "3.10"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt || pip install requests
-
-      - name: Ensure state file
-        run: |
-          [ -f last_ids.txt ] || touch last_ids.txt
-          ls -la
+      - name: Install deps
+        run: pip install requests
 
       - name: Run mailer
-  env:
-          # 시크릿이 없더라도 코드가 config.password로 폴백하므로 에러 안 남
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          WM_CONFIG_PATH: config.json
-          WM_STATE_PATH: last_ids.txt
-        run: python wanted_mailer.py
+        run: python wanted_mailer_auto.py
+        env:
+          MY_EMAIL: ${{ secrets.MY_EMAIL }}
+          MY_PASSWORD: ${{ secrets.MY_PASSWORD }}
+
+      - name: Commit and push if changed
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add last_id.txt
+          git diff --staged --quiet || git commit -m "📝 Update last_id.txt [skip ci]"
+          git push
